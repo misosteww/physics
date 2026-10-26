@@ -1,0 +1,178 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Physics</title>
+<style>
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 16px;
+  font-family: Arial, sans-serif;
+  color: #172033; background: #f0f5ff;
+}
+main {
+  max-width: 700px; margin: auto;
+  background: white; padding: 22px;
+  border-radius: 18px;
+}
+h1 { margin-top: 0; color: #1d4ed8; }
+.control { margin: 22px 0; }
+.line {
+  display: flex; justify-content: space-between;
+  gap: 10px; margin-bottom: 10px;
+}
+output { font-weight: bold; color: #2563eb; }
+input[type=range] {
+  width: 100%; cursor: pointer;
+  accent-color: #2563eb;
+}
+.results {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+}
+.card {
+  padding: 15px; border-radius: 12px;
+  background: #eff6ff;
+}
+.card span { display: block; color: #64748b; font-size: 13px; }
+.card strong { font-size: 23px; }
+.switchrow {
+  display: flex; justify-content: space-between;
+  align-items: center; margin: 20px 0;
+}
+button {
+  padding: 10px 16px; border: 1px solid #cbd5e1;
+  border-radius: 8px; background: white; cursor: pointer;
+}
+.note { font-size: 12px; color: #64748b; line-height: 1.5; }
+svg { width: 100%; background: #f8fafc; border-radius: 10px; }
+@media(max-width:420px) {
+  main { padding: 14px; }
+  .results { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<main>
+  <h1>Physics</h1>
+  <p>Explore speed, distance, and lift using the sliders.</p>
+
+  <div class="control">
+    <div class="line"><label for="speed">Speed</label>
+      <output id="sv">10 m/s</output></div>
+    <input id="speed" type="range" min="0" max="50" value="10">
+  </div>
+
+  <div class="control">
+    <div class="line"><label for="distance">Distance</label>
+      <output id="dv">20 m</output></div>
+    <input id="distance" type="range" min="1" max="100" value="20">
+  </div>
+
+  <div class="control">
+    <div class="line"><label for="lift">Lift force</label>
+      <output id="lv">50 N</output></div>
+    <input id="lift" type="range" min="0" max="200" step="5" value="50">
+  </div>
+
+  <div class="switchrow">
+    <label for="drag">Show air resistance</label>
+    <input id="drag" type="checkbox" checked>
+  </div>
+
+  <div class="switchrow">
+    <label for="forces">Show force diagram</label>
+    <input id="forces" type="checkbox" checked>
+  </div>
+
+  <section id="diagram">
+    <svg viewBox="0 0 320 125" role="img"
+         aria-label="Illustrative motion and force arrows">
+      <path d="M10 100 L100 25 L180 100"
+        fill="none" stroke="#64748b" stroke-width="3"/>
+      <rect x="62" y="53" width="32" height="17" rx="4"
+        fill="#60a5fa" stroke="#1d4ed8"
+        transform="rotate(-40 78 61)"/>
+      <path d="M80 60 L120 30" stroke="#2563eb" stroke-width="3"/>
+      <text x="123" y="28" font-size="11" fill="#2563eb">Speed</text>
+      <g id="arrows">
+        <path d="M220 75 V25" stroke="#16a34a" stroke-width="3"/>
+        <path d="M214 34 L220 24 L226 34"
+          fill="none" stroke="#16a34a" stroke-width="3"/>
+        <text x="229" y="34" font-size="11" fill="#16a34a">Lift</text>
+        <path d="M300 65 H265" stroke="#9333ea" stroke-width="3"/>
+        <path d="M274 59 L264 65 L274 71"
+          fill="none" stroke="#9333ea" stroke-width="3"/>
+        <text x="266" y="55" font-size="10" fill="#9333ea">Drag</text>
+      </g>
+    </svg>
+  </section>
+
+  <h2>Results</h2>
+  <div class="results">
+    <div class="card">
+      <span>Travel time</span>
+      <strong id="time">2.00 s</strong>
+      <p class="note">Distance ÷ speed at constant speed.</p>
+    </div>
+    <div class="card">
+      <span>Kinetic energy per kg</span>
+      <strong id="energy">50 J/kg</strong>
+      <p class="note">½ × speed². Multiply by mass in kg for joules.</p>
+    </div>
+    <div class="card">
+      <span>Selected lift</span>
+      <strong id="liftResult">50 N</strong>
+      <p class="note">User-set value, not a measured force.</p>
+    </div>
+    <div class="card">
+      <span>Air resistance</span>
+      <strong id="dragResult">On</strong>
+      <p class="note">Visual setting only; it does not change the estimates.</p>
+    </div>
+  </div>
+
+  <p class="note">
+    Simplified model. Actual lift and drag require air density,
+    area, shape, and aerodynamic coefficients.
+  </p>
+  <button id="reset">Reset values</button>
+</main>
+
+<script>
+const el = id => document.getElementById(id);
+
+function update() {
+  const v = Number(el("speed").value);
+  const d = Number(el("distance").value);
+  const l = Number(el("lift").value);
+
+  el("sv").textContent = v + " m/s";
+  el("dv").textContent = d + " m";
+  el("lv").textContent = l + " N";
+  el("time").textContent = v > 0 ? (d / v).toFixed(2) + " s" : "—";
+  el("energy").textContent = (0.5 * v * v).toFixed(1) + " J/kg";
+  el("liftResult").textContent = l + " N";
+  el("dragResult").textContent = el("drag").checked ? "On" : "Off";
+  el("arrows").style.display = el("drag").checked ? "" : "none";
+  el("diagram").hidden = !el("forces").checked;
+}
+
+["speed","distance","lift","drag","forces"].forEach(id => {
+  el(id).addEventListener("input", update);
+});
+
+el("reset").addEventListener("click", () => {
+  el("speed").value = 10;
+  el("distance").value = 20;
+  el("lift").value = 50;
+  el("drag").checked = true;
+  el("forces").checked = true;
+  update();
+});
+
+update();
+</script>
+</body>
+</html>
