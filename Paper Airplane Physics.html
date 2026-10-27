@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Paper Airplane Physics</title>
+<style>
+:root{--bg:#f2f7ff;--pn:#fff;--ink:#173568;--mut:#5b7497;--ln:#d5e5fa;--acc:#2878f0;--soft:#edf5ff;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1626;--pn:#16223a;--ink:#dce8fb;--mut:#92a8c8;--ln:#27385a;--acc:#5b9bff;--soft:#1b2a47;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0e1626;--pn:#16223a;--ink:#dce8fb;--mut:#92a8c8;--ln:#27385a;--acc:#5b9bff;--soft:#1b2a47;color-scheme:dark}
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{margin:0;padding:16px;background:var(--bg);color:var(--ink);font:16px/1.4 "Segoe UI",system-ui,Arial,sans-serif}
+.app{max-width:1200px;margin:auto}
+header{display:flex;gap:12px;align-items:center;margin:4px 0 16px}
+header .logo{font-size:38px;color:var(--acc)}
+h1{font-size:30px;margin:0 0 3px}
+header p{margin:0;color:var(--mut)}
+.layout{display:grid;grid-template-columns:250px minmax(300px,1fr) 250px;gap:14px}
+.panel{background:var(--pn);border:1px solid var(--ln);border-radius:14px;padding:16px;min-width:0}
+.control{padding:11px 0;border-bottom:1px solid var(--ln)}
+.labelrow{display:flex;justify-content:space-between;gap:8px;font-weight:600}
+output{white-space:nowrap;color:var(--acc);font-weight:700}
+input[type=range]{width:100%;accent-color:var(--acc);margin:12px 0 4px}
+.ends{display:flex;justify-content:space-between;color:var(--mut);font-size:12px}
+select{width:100%;margin-top:8px;padding:8px;border-radius:8px;border:1px solid var(--ln);background:var(--soft);color:var(--ink);font:inherit}
+.switchrow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 0;border-bottom:1px solid var(--ln);font-weight:600}
+.switchrow small{display:block;color:var(--mut);font-weight:400;margin-top:3px;font-size:12px}
+.switch{accent-color:var(--acc);width:22px;height:22px;flex-shrink:0}
+button{cursor:pointer;border:1px solid var(--ln);border-radius:24px;padding:10px 16px;font:inherit;font-weight:600;background:var(--pn);color:var(--ink)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.play{background:var(--acc);color:#fff;border:0;white-space:nowrap}
+.reset{width:100%;margin-top:14px}
+.scenePanel{padding:0;overflow:hidden}
+.sceneTop{padding:12px 15px;display:flex;justify-content:space-between;align-items:center;gap:10px;font-weight:600}
+.scene{aspect-ratio:1.37/1;min-height:300px;background:#a6ddff}
+.scene svg{display:block;width:100%;height:100%}
+.legend{display:flex;flex-wrap:wrap;gap:12px;padding:10px 16px 14px;font-size:12px;color:var(--mut)}
+.legend i{display:inline-block;width:16px;height:4px;margin-right:5px;vertical-align:middle;border-radius:2px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cell{background:var(--soft);border:1px solid var(--ln);border-radius:10px;padding:9px 11px}
+.cell span{display:block;color:var(--mut);font-size:12px}
+.cell strong{font-size:20px}
+h2{font-size:16px;margin:0 0 8px}
+h2.sp{margin-top:16px}
+.badge{display:none;margin-top:10px;padding:8px 10px;border-radius:10px;background:#fde8e8;color:#9b1c1c;font-size:13px;font-weight:600}
+.how{padding:12px;background:var(--soft);border-radius:10px;font-size:13px;line-height:1.5;margin-top:14px}
+.note{font-size:12px;color:var(--mut);line-height:1.45}
+@media(max-width:950px){.layout{grid-template-columns:1fr 1.3fr}.results{grid-column:1/-1}}
+@media(max-width:620px){body{padding:8px}.layout{grid-template-columns:1fr}.results{grid-column:auto}h1{font-size:26px}.scene{min-height:250px}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+</style>
+</head>
+<body><div class="app">
+<header><div class="logo">✈</div><div><h1>Paper Airplane Physics</h1><p>Throw a plane and watch lift, drag, weight and pitch decide where it lands.</p></div></header>
+<div class="layout">
+<section class="panel">
+ <div class="control"><div class="labelrow"><label for="speed">Throw speed</label><output id="speedOut"></output></div><input id="speed" type="range" min="1" max="30" step="0.5" value="8"><div class="ends"><span>1 m/s</span><span>30 m/s</span></div></div>
+ <div class="control"><div class="labelrow"><label for="angle">Launch angle</label><output id="angleOut"></output></div><input id="angle" type="range" min="-10" max="45" value="10"><div class="ends"><span>-10°</span><span>45°</span></div></div>
+ <div class="control"><div class="labelrow"><label for="height">Release height</label><output id="heightOut"></output></div><input id="height" type="range" min="0.5" max="6" step="0.1" value="1.5"><div class="ends"><span>0.5 m</span><span>6 m</span></div></div>
+ <div class="control"><label for="wing" style="font-weight:600">Plane design</label><select id="wing"><option value="dart">Classic dart</option><option value="glider">Wide glider</option><option value="jet">Narrow jet</option></select></div>
+ <div class="switchrow"><div>Air<small>Off = vacuum, plain projectile</small></div><input class="switch" id="air" type="checkbox" checked aria-label="Air"></div>
+ <div class="switchrow"><div>Force arrows<small>Lift, weight, drag, motion</small></div><input class="switch" id="forces" type="checkbox" checked aria-label="Force arrows"></div>
+ <div class="control" style="border:0"><label for="rate" style="font-weight:600">Playback speed</label><select id="rate"><option value="1">Real time</option><option value="0.5">Half speed</option><option value="0.25">Quarter speed</option></select></div>
+ <button class="reset" id="reset" type="button">↻ Reset settings</button>
+</section>
+<section class="panel scenePanel">
+ <div class="sceneTop"><span id="status">Ready to throw</span><button class="play" id="play" type="button">✈ Throw plane</button></div>
+ <div class="scene"><svg id="svg" viewBox="0 0 700 510" role="img" aria-label="Paper airplane flight scene">
+  <defs><linearGradient id="sky" x2="0" y2="1"><stop stop-color="#7fc8fb"/><stop offset="1" stop-color="#e6f8ff"/></linearGradient><linearGradient id="land" x2="0" y2="1"><stop stop-color="#a9de86"/><stop offset="1" stop-color="#6cb56f"/></linearGradient></defs>
+  <rect width="700" height="510" fill="url(#sky)"/><circle cx="625" cy="62" r="26" fill="#fff7c7"/>
+  <g fill="#fff" opacity=".7"><ellipse cx="90" cy="110" rx="52" ry="18"/><ellipse cx="122" cy="101" rx="38" ry="24"/><ellipse cx="540" cy="190" rx="52" ry="17"/><ellipse cx="573" cy="181" rx="38" ry="22"/></g>
+  <path d="M0 432 Q150 402 290 430 T700 420 L700 440 L0 440Z" fill="#9cd78f"/>
+  <rect y="440" width="700" height="70" fill="url(#land)"/><line x1="0" y1="440" x2="700" y2="440" stroke="#4f9a5a" stroke-width="2"/>
+  <g id="ticks"></g><g id="person"></g><g id="path"></g><ellipse id="shadow" cx="0" cy="444" rx="14" ry="3" fill="#14391f" opacity=".25"/>
+  <g id="plane"><path d="M30 0 L-24 -12 L-13 1Z" fill="#fff" stroke="#64748b" stroke-width="1.6" stroke-linejoin="round"/><path d="M30 0 L-13 1 L-22 10Z" fill="#dbe6f3" stroke="#64748b" stroke-width="1.6" stroke-linejoin="round"/><path d="M-13 1 L-24 -12" stroke="#94a3b8" stroke-width="1"/></g>
+  <g id="arrows"></g>
+ </svg></div>
+ <div class="legend"><span><i style="background:#2878f0"></i>Flight path</span><span><i style="background:#20a34a"></i>Lift</span><span><i style="background:#df4545"></i>Weight</span><span><i style="background:#9333ea"></i>Drag</span><span><i style="background:#e08a00"></i>Motion</span></div>
+</section>
+<section class="panel results">
+ <h2>Live</h2>
+ <div class="grid2">
+  <div class="cell"><span>Speed</span><strong id="lSpeed">0</strong></div>
+  <div class="cell"><span>Altitude</span><strong id="lAlt">0</strong></div>
+  <div class="cell"><span>Distance</span><strong id="lDist">0</strong></div>
+  <div class="cell"><span>Angle of attack</span><strong id="lAoA">0</strong></div>
+  <div class="cell"><span>Load factor</span><strong id="lG">0</strong></div>
+  <div class="cell"><span>Lift-to-drag</span><strong id="lLD">0</strong></div>
+ </div>
+ <div class="badge" id="stallBadge">Stalled: the wing has lost lift</div>
+ <h2 class="sp">Flight results</h2>
+ <div class="grid2">
+  <div class="cell"><span>Range</span><strong id="rRange"></strong></div>
+  <div class="cell"><span>Flight time</span><strong id="rTime"></strong></div>
+  <div class="cell"><span>Max height</span><strong id="rMax"></strong></div>
+  <div class="cell"><span>Impact speed</span><strong id="rImp"></strong></div>
+  <div class="cell"><span>Best lift-to-drag</span><strong id="rLD"></strong></div>
+  <div class="cell"><span>Peak load factor</span><strong id="rG"></strong></div>
+ </div>
+ <div class="how"><b>How it works</b><br>The plane is a 5 g body pulled by gravity, lift and drag. Lift and drag depend on speed squared and on the angle of attack, the angle between the wing and the air it moves through. A pitching moment turns the nose back toward its trimmed angle, so a fast throw climbs, slows, stalls, dips and swoops. Paper is floppy: as speed rises the wings bend back, so lift levels off at a few g instead of growing without limit. That is why hard throws fly flat and fast rather than looping.</div>
+ <p class="note">Values are estimates from a simple model of a 5 g paper plane, not a calibrated wind-tunnel result.</p>
+</section>
+</div></div>
+<script>
+(() => {
+const $ = i => document.getElementById(i);
+const G = 9.81, RHO = 1.2, MASS = 0.005, X0 = 95, GY = 440, D2R = Math.PI / 180;
+const WING = {
+  // qf = dynamic pressure (Pa) at which the paper wing has flexed enough to halve its lift
+  dart:  {S:.022, c:.15, a:3.0, cl0:.12, cd0:.035, k:.30, trim:.05, I:3.2e-5, km:.30, cmq:1.0, qf:45},
+  glider:{S:.040, c:.12, a:3.6, cl0:.12, cd0:.045, k:.17, trim:.035, I:3.5e-5, km:.6, cmq:2, qf:18},
+  jet:   {S:.016, c:.13, a:2.6, cl0:.08, cd0:.030, k:.36, trim:.04, I:3.0e-5, km:.35, cmq:1.0, qf:80}
+};
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+const wrap = a => ((a + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI;
+const smooth = x => { x = clamp(x, 0, 1); return x * x * (3 - 2 * x); };
+
+let pts = [], R = {}, s = 30, st = {mode: "idle", tp: 0, last: 0, raf: 0};
+
+function simulate() {
+  const W = WING[$("wing").value], air = $("air").checked;
+  const h0 = +$("height").value, v0 = +$("speed").value, a0 = +$("angle").value * D2R;
+  let x = 0, y = h0, vx = v0 * Math.cos(a0), vy = v0 * Math.sin(a0);
+  let th = a0 + (air ? W.trim : 0), om = 0, t = 0, maxH = h0, maxLD = 0, maxG = 0, stalled = false;
+  const dt = 0.001, out = [];
+  for (let i = 0; t < 45; i++, t += dt) {
+    const V = Math.hypot(vx, vy), gm = Math.atan2(vy, vx);
+    let L = 0, D = 0, al = 0, M = 0;
+    if (air) {
+      al = wrap(th - gm);
+      const w = smooth((Math.abs(al) - .27) / .16), sa = Math.sin(al);
+      // Paper wings bend back as air pressure rises, which washes out their lift and adds a little drag
+      const flex = 1 / (1 + .5 * RHO * V * V / W.qf);
+      const cll = (W.cl0 + W.a * al) * flex, cdl = W.cd0 * (1 + .6 * (1 - flex)) + W.k * cll * cll;
+      const CL = (1 - w) * cll + w * 1.1 * Math.sin(2 * al) * flex;
+      const CD = (1 - w) * cdl + w * (W.cd0 + 1.9 * sa * sa);
+      const q = .5 * RHO * V * V * W.S;
+      L = q * CL; D = q * CD;
+      maxG = Math.max(maxG, Math.abs(L) / (MASS * G));
+      M = q * W.c * (-W.km * (al - W.trim) - W.cmq * W.c / (2 * Math.max(V, 1)) * om);
+      if (Math.abs(al) > .35) stalled = true;
+      if (V > 2 && D > 1e-6) maxLD = Math.max(maxLD, L / D);
+    } else th = gm;
+    if (i % 10 === 0) out.push([t, x, y, th, V, L, D, al, gm]);
+    const ax = (-D * Math.cos(gm) - L * Math.sin(gm)) / MASS;
+    const ay = (-D * Math.sin(gm) + L * Math.cos(gm)) / MASS - G;
+    if (air) { om += M / W.I * dt; th += om * dt; }
+    vx += ax * dt; vy += ay * dt;
+    const nx = x + vx * dt, ny = y + vy * dt;
+    if (ny <= 0) {
+      const f = y / (y - ny);
+      x += (nx - x) * f; y = 0; t += dt * f;
+      out.push([t, x, 0, th, Math.hypot(vx, vy), L, D, al, Math.atan2(vy, vx)]);
+      break;
+    }
+    x = nx; y = ny; if (y > maxH) maxH = y;
+  }
+  const end = out[out.length - 1];
+  pts = out;
+  R = {range: end[1], time: end[0], maxH, imp: end[4], maxLD, maxG, air, stalled, h0, W};
+  const xmax = Math.max(end[1], 4) + 1.2;
+  s = clamp(Math.min(575 / xmax, 375 / (maxH + .8)), 3, 60);
+  $("rRange").textContent = R.range.toFixed(1) + " m";
+  $("rTime").textContent = R.time.toFixed(1) + " s";
+  $("rMax").textContent = maxH.toFixed(1) + " m";
+  $("rImp").textContent = end[4].toFixed(1) + " m/s";
+  $("rLD").textContent = air ? maxLD.toFixed(1) : "n/a";
+  $("rG").textContent = air ? maxG.toFixed(1) + " g" : "0 g";
+  buildStatic();
+}
+
+function at(t) {
+  const n = pts.length;
+  if (t >= pts[n - 1][0]) return pts[n - 1];
+  const i = Math.min(Math.floor(t / .01), n - 2), a = pts[i], b = pts[i + 1];
+  const f = clamp((t - a[0]) / (b[0] - a[0] || 1), 0, 1);
+  return a.map((v, k) => v + (b[k] - v) * f);
+}
+
+const sx = x => X0 + x * s, sy = y => GY - y * s;
+let predD = "", pathPts = [];
+
+function person() {
+  const feet = Math.max(0, R.h0 - 1.35), hy = -Math.min(R.h0, 1.35) * 100;
+  const sh = [0, -138], hand = [55, hy], el = [(sh[0] + hand[0]) / 2 - 12, (sh[1] + hand[1]) / 2 + 14];
+  const plat = feet > 0 ? `<rect x="-80" y="0" width="190" height="${feet * 100}" fill="#b08968"/><rect x="-80" y="0" width="190" height="5" fill="#8d6b4f"/>` : "";
+  return `<g transform="translate(${X0 - .55 * s} ${GY - feet * s}) scale(${s / 100})" stroke-linecap="round" stroke-linejoin="round" fill="none">${plat}
+  <path d="M0 -85 L-9 0 M0 -85 L16 0" stroke="#334155" stroke-width="13"/><path d="M-9 0 H-24 M16 0 H31" stroke="#49372f" stroke-width="8"/>
+  <path d="M0 -140 V-85" stroke="#2878f0" stroke-width="26"/><path d="M0 -138 L-26 -112 L-38 -92" stroke="#f1c6a5" stroke-width="10"/>
+  <path d="M${sh[0]} ${sh[1]} L${el[0]} ${el[1]} L${hand[0]} ${hand[1]}" stroke="#f1c6a5" stroke-width="10"/>
+  <circle cx="2" cy="-163" r="12" fill="#f1c6a5"/><path d="M-10 -165 Q-8 -180 5 -176 Q14 -172 14 -163 Q4 -170 -10 -165Z" fill="#49372f"/></g>`;
+}
+
+function buildStatic() {
+  const steps = [1, 2, 5, 10, 20, 50, 100, 200], step = steps.find(v => v * s >= 60) || 200;
+  let t = "";
+  for (let d = step; sx(d) < 690; d += step) t += `<line x1="${sx(d)}" y1="440" x2="${sx(d)}" y2="448" stroke="#245b3e" stroke-width="1.5"/><text x="${sx(d)}" y="464" text-anchor="middle" fill="#245b3e" font-size="12">${d} m</text>`;
+  $("ticks").innerHTML = t;
+  $("person").innerHTML = person();
+  pathPts = pts.map(p => sx(p[1]).toFixed(1) + " " + sy(p[2]).toFixed(1));
+  predD = "M" + pathPts.filter((_, i) => i % 3 === 0 || i === pathPts.length - 1).join("L");
+}
+
+function arrow(x, y, dx, dy, color, label) {
+  const len = Math.hypot(dx, dy);
+  if (len < 4) return "";
+  const ux = dx / len, uy = dy / len, ex = x + dx, ey = y + dy;
+  const h1 = [ex - ux * 10 - uy * 5, ey - uy * 10 + ux * 5], h2 = [ex - ux * 10 + uy * 5, ey - uy * 10 - ux * 5];
+  const tx = ex + (dx >= 0 ? 6 : -6), anchor = dx >= 0 ? "start" : "end";
+  return `<path d="M${x} ${y}L${ex} ${ey}M${h1[0]} ${h1[1]}L${ex} ${ey}L${h2[0]} ${h2[1]}" stroke="${color}" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>` +
+    `<text x="${tx}" y="${ey + 4}" text-anchor="${anchor}" fill="${color}" font-size="13" font-weight="bold" stroke="#fff" stroke-width="3" paint-order="stroke">${label}</text>`;
+}
+
+function draw() {
+  const p = st.mode === "idle" ? pts[0] : at(st.tp);
+  const [, x, y, th, V, L, D, al, gm] = p;
+  const px = sx(x), py = sy(y);
+  $("plane").setAttribute("transform", `translate(${px} ${py}) rotate(${-th / D2R})`);
+  const sh = $("shadow");
+  sh.setAttribute("cx", px); sh.setAttribute("opacity", (.28 / (1 + y * .5)).toFixed(2));
+  sh.setAttribute("rx", 14 + Math.min(y, 6) * 2);
+  let idx = 0;
+  if (st.mode !== "idle") { idx = Math.min(Math.floor(st.tp / .01), pts.length - 1); if (st.tp >= pts[pts.length - 1][0]) idx = pts.length - 1; }
+  const trail = idx > 0 ? "M" + pathPts.slice(0, idx + 1).filter((_, i) => i % 3 === 0 || i === idx).join("L") : "";
+  $("path").innerHTML = `<path d="${predD}" fill="none" stroke="#2f5d8c" stroke-width="2" stroke-dasharray="6 7" opacity=".45"/>` + (trail ? `<path d="${trail}" fill="none" stroke="#2878f0" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>` : "");
+  let a = "";
+  if ($("forces").checked && st.mode !== "idle") {
+    const sg = Math.sin(gm), cg = Math.cos(gm), W0 = 46, W = MASS * G;
+    const cap = v => clamp(v, 0, 120);
+    a += arrow(px, py, 0, W0, "#df4545", "Weight");
+    if (R.air) {
+      a += arrow(px, py, -sg * cap(W0 * L / W), -cg * cap(W0 * L / W), "#20a34a", "Lift");
+      a += arrow(px, py, -cg * cap(W0 * D / W), sg * cap(W0 * D / W), "#9333ea", "Drag");
+    }
+    const m = 24 + clamp(V, 0, 30) * 2;
+    a += arrow(px, py, cg * m, -sg * m, "#e08a00", "Motion");
+  }
+  $("arrows").innerHTML = a;
+  $("lSpeed").textContent = V.toFixed(1) + " m/s";
+  $("lAlt").textContent = y.toFixed(1) + " m";
+  $("lDist").textContent = x.toFixed(1) + " m";
+  $("lAoA").textContent = R.air ? (al / D2R).toFixed(0) + "°" : "n/a";
+  $("lG").textContent = R.air ? (L / (MASS * G)).toFixed(1) + " g" : "0 g";
+  $("lLD").textContent = R.air && D > 1e-6 ? (L / D).toFixed(1) : "n/a";
+  $("stallBadge").style.display = R.air && st.mode !== "idle" && Math.abs(al) > .3 ? "block" : "none";
+  const names = {idle: "Ready to throw", play: "In flight", pause: "Paused", done: "Landed " + R.range.toFixed(1) + " m away"};
+  $("status").textContent = names[st.mode];
+}
+
+function loop(now) {
+  if (st.mode !== "play") return;
+  if (!st.last) st.last = now;
+  st.tp += Math.min(.05, (now - st.last) / 1000) * +$("rate").value;
+  st.last = now;
+  const end = pts[pts.length - 1][0];
+  if (st.tp >= end) { st.tp = end; st.mode = "done"; $("play").textContent = "↻ Throw again"; }
+  draw();
+  if (st.mode === "play") st.raf = requestAnimationFrame(loop);
+}
+
+$("play").addEventListener("click", () => {
+  if (st.mode === "play") { st.mode = "pause"; cancelAnimationFrame(st.raf); $("play").textContent = "▶ Resume"; draw(); return; }
+  if (st.mode === "idle" || st.mode === "done") st.tp = 0;
+  st.mode = "play"; st.last = 0; $("play").textContent = "Ⅱ Pause";
+  st.raf = requestAnimationFrame(loop);
+});
+
+function refresh() {
+  cancelAnimationFrame(st.raf);
+  st = {mode: "idle", tp: 0, last: 0, raf: 0};
+  $("play").textContent = "✈ Throw plane";
+  $("speedOut").textContent = $("speed").value + " m/s";
+  $("angleOut").textContent = $("angle").value + "°";
+  $("heightOut").textContent = (+$("height").value).toFixed(1) + " m";
+  simulate(); draw();
+}
+["speed", "angle", "height", "wing", "air"].forEach(i => $(i).addEventListener("input", refresh));
+$("forces").addEventListener("input", draw);
+$("reset").addEventListener("click", () => {
+  $("speed").value = 8; $("angle").value = 10; $("height").value = 1.5;
+  $("wing").value = "dart"; $("air").checked = true; $("forces").checked = true; $("rate").value = 1;
+  refresh();
+});
+refresh();
+})();
+</script></body></html>
